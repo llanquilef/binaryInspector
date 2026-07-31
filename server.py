@@ -1,5 +1,6 @@
 import re
 import subprocess
+# import subprocess
 
 
 class BinaryInspector:
@@ -14,38 +15,48 @@ class BinaryInspector:
 
     def categorizer(self):
         byte_response = self.read_file()
-        bytes_dictionary: dict = {
+        bytes_dictionary = {
             'png': re.search(rb'\x89PNG\r\n\x1a\n', byte_response, re.S),
             'jpg': re.search(rb'\xff\xd8\xff\xdb\x00C\x00\x04', byte_response,
                              re.S),
+            'gif': re.search(rb'GIF8[79]a', byte_response, re.S)
         }
-        for type_data in bytes_dictionary.keys():
-            print(type_data)
-            if type_data == 'png':
-                print(type_data)
-                return str(type_data)
-            elif type_data == 'jpg':
-                return str(type_data)
-            elif type_data == 'pdf':
-                return str(type_data)
+        for key, match in bytes_dictionary.items():
+            # If the binary of one type of file matches returns the key
+            # of that type
+            if match:
+                return key
+
+    def process_images(self):
+        command = ['exiftool', self.file_or_text]
+        with open('log.txt', 'w', encoding='utf-8') as log:
+            subprocess.run(command,
+                           stdout=log
+                           )
 
     def process_by_type(self):
-        commands: dict[str, list[str]] = {
-            'jpg': ['exiftool', self.file_or_text]
+        category = self.categorizer()
+        # Narrowing
+        # With this we define that type of category can in some cases be None or str
+        if category is None:
+            return
+        commands = {
+            # This is the reference to the methods, in this case, his behavior
+            #  its like objects
+            'jpg': self.process_images,
+            'png': self.process_images,
+            'gif': self.process_images
         }
-        for key, command in commands.items():
-            category = self.categorizer()
-            print(category)
-            if category == 'jpg':
-                print(command)
-                with open('log.txt', 'w', encoding='utf-8') as log:
-                    subprocess.run(command,
-                                   stdout=log
-                                   )
+        handler = commands.get(category)
+        if handler:
+            # Then we call the reference of the function and then we execute
+            handler()
+        else:
+            print('No existe método para el tipo del archivo')
 
 
 if __name__ == '__main__':
     tool = BinaryInspector(file_or_text='cat.jpg')
     tool.read_file()
     tool.categorizer()
-    # tool.process_by_type()
+    tool.process_by_type()
